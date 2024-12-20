@@ -19,8 +19,9 @@ int main()
     {
         if(check_pg_numbers_vs_rules(pages, rule_book))
         {
-            int midpos = pages.size()/2;
-            auto midnum = pages[midpos];
+            int rem = (pages.size()%2 == 0) ? 0 : 1;
+            int midpos = pages.size()/2 + rem;
+            auto midnum = pages[midpos - 1];
             std::cout << "Milldle : " << midnum << "\n";
             middle_sum += std::stoi(midnum);
         }
