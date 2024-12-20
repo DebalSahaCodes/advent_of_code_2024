@@ -152,7 +152,11 @@ PGSVEC get_pages_vec(const std::string& page_str)
             str += c;
         }
     }
-    return page_vec;
+    if(!str.empty())
+    {
+        page_vec.emplace_back(str);
+        str.clear();
+    }
 }
 
 
