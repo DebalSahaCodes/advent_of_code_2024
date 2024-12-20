@@ -7,7 +7,7 @@
 
 int main()
 {
-    const std::string fileP = "../pussle_input.txt";
+    const std::string fileP = "../puzzle_input.txt";
     //const std::string fileP = ("../sample_imput.txt");
 
     std::vector<RULEDATA> rule_book;
