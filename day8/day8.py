@@ -6,7 +6,7 @@ class Position:
     def __init__(self, x, y):
         self._x=x
         self._y=y
-    def view_position(self):
+    def pos_str(self):
         return "(" + str(self._x) + "," + str(self._y) + ")"
 
 class Antenna:
@@ -20,8 +20,8 @@ class Antenna:
         return self._name
     def position(self):
         return self._pos
-    def view_position(self):
-        return self._pos.view_position()
+    def pos_str(self):
+        return self._pos.pos_str()
     def set_is_done(self):
         self._is_done=1
     def view_is_done(self):
@@ -31,7 +31,7 @@ def are_same_antennas(a1, a2):
     return a1.name()==a2.name() and a1._pos._x==a2._pos._x and a1._pos._y==a2._pos._y
 
 def get_same_antennas(anns, a_given):
-    return [a for a in anns if a.name()==a_given.name() and not a.view_is_done()]
+    return [a for a in anns if a.name()==a_given.name() and not are_same_positions(a.position(), a_given.position()) and not a.view_is_done()]
 
 def mark_pair_done_in_antennas(a1, a2, anns):
     for a in anns:
@@ -48,7 +48,7 @@ def distance_pos1_pos2(pos1, pos2):
 def are_same_positions(pos1, pos2):
     return pos1._x==pos2._x and pos1._y==pos2._y
 
-def is_antinode_from_antennas_pair(pos0, ant1, ant2):
+def is_antinode_from_antennas_pair_to_solve_part1(pos0, ant1, ant2):
     d1=distance_pos1_pos2(pos0, ant1.position())
     d2=distance_pos1_pos2(pos0, ant2.position())
     return d1==d2*2 or 2*d1==d2
@@ -61,7 +61,7 @@ def is_clear_space_in_map(char):
 
 def get_slope(pos1, pos2):
     if pos2._x==pos1._x:
-        return -1
+        return -999 # this is not the correct slop value but is ggo enough to avoid "div by zero" and be used for checking collinearity
     else:
         return (pos2._y-pos1._y)/(pos2._x-pos1._x)
 
@@ -70,37 +70,71 @@ def are_collinear(pos1, pos2, pos3):
 
 
 def solve_day_8_part1(n_antennas, all_positions):
-    # find antinodes for all antennas
-    i_counter=0
+    # find antinodes for all antennas where antinodes are positions that are collinear with 2 antennas
+    # and distnace from one anetenna is twice the distance from the other
     i_antinode=0
     a_antinodes=[]
     for a1 in n_antennas:
-        i_counter+=1
-        if a1.view_is_done():
-            print("Result " + str(i_counter) + ": " + a1.name() + " at " + a1.view_position() + " is already processed so skipping ....")
-        else:
+        a_found = get_same_antennas(n_antennas, a1)
+        for a2 in a_found:
+            y_p=0
+            for line in all_positions:
+                x_p=0
+                for c in line:
+                    pos=Position(x_p,y_p)
+                    if not are_same_positions(pos,a1.position()) and not are_same_positions(pos,a2.position()) and are_collinear(pos, a1.position(), a2.position()):
+                    #if is_clear_space_in_map(c):
+                        if is_antinode_from_antennas_pair_to_solve_part1(pos, a1, a2) and is_not_in_pos_list(pos, a_antinodes):
+                            i_antinode += 1
+                            dist1=distance_pos1_pos2(pos, a1.position())
+                            dist2=distance_pos1_pos2(pos, a2.position())
+                            print(" Result " + str(i_antinode) + ": adding pos " + pos.pos_str() + " for dist:" + str(dist1) + " from " + a1.name() + " at " + a1.pos_str() + " and  dist:" + str(dist2)  + " from " + a2.name() + " at " + a2.pos_str())
+                            a_antinodes.append(pos)
+                    x_p+=1
+                y_p+=1
+
+
+def solve_day_8_part2(n_antennas, all_positions):
+    # find antinodes for all antennas considering the "effects of resonant harmonics" so the antinodes are positions that are collinear 
+    # with "at least" 2 antennas "regardless of the distnace from the anetennas"
+    # That means, use almost the same algorithms as part-1 and get rid of the distance-check for antinode, only keep collinearity check
+    # find antinodes for all antennas where antinodes are positions that are collinear with 2 antennas
+    # and distnace from one anetenna is twice the distance from the other
+    i_antinode=0
+    a_antinodes=[]
+    for a1 in n_antennas:
             a_found = get_same_antennas(n_antennas, a1)
-            #print("Result " + str(i_counter) + ": found " + str(len(a_found)) + " for " + a1.name() + " at " + a1.view_position())
             for a2 in a_found:
-                if not a2.view_is_done():
-                    y_p=0
-                    for line in all_positions:
-                        x_p=0
-                        for c in line:
-                            pos=Position(x_p,y_p)
-                            if not are_same_positions(pos,a1.position()) and not are_same_positions(pos,a2.position()) and are_collinear(pos, a1.position(), a2.position()):
-                            #if is_clear_space_in_map(c):
-                                if is_antinode_from_antennas_pair(pos, a1, a2) and is_not_in_pos_list(pos, a_antinodes):
-                                    i_antinode += 1
-                                    dist1=distance_pos1_pos2(pos, a1.position())
-                                    dist2=distance_pos1_pos2(pos, a2.position())
-                                    print(" Result " + str(i_antinode) + ": adding pos " + pos.view_position() + " for dist:" + str(dist1) + " from " + a1.name() + " at " + a1.view_position() + " and  dist:" + str(dist2)  + " from " + a2.name() + " at " + a2.view_position())
-                                    a_antinodes.append(pos)
-                            x_p+=1
-                        y_p+=1
+                y_p=0
+                for line in all_positions:
+                    x_p=0
+                    for c in line:
+                        pos=Position(x_p,y_p)
+                        if is_not_in_pos_list(pos, a_antinodes):
+                            # find the slopes explicitly here, to print them with reult
+                            slope_1=get_slope(pos,a1.position())
+                            slope_2=get_slope(pos,a2.position())
+                            if slope_1==slope_2:
+                                i_antinode += 1
+                                print(str(i_antinode) + " Adding pos " + pos.pos_str() + " with slope " + str(slope_1) + " form " + a1.name() + " at " + a1.pos_str() + " and at slope " + str(slope_2) + " from " + a2.name() + " at " + a2.pos_str())
+                                a_antinodes.append(pos)
+                            elif are_same_positions(a1.position(), pos):
+                                i_antinode += 1
+                                print(str(i_antinode) + " Adding pos " + pos.pos_str() + " co-existing with " + a1.name() + " at " + a1.pos_str() + " and at slope " + str(slope_2) + " from " + a2.name() + " at " + a2.pos_str())
+                                a_antinodes.append(pos)
+                            elif are_same_positions(a2.position(), pos):
+                                i_antinode += 1
+                                print(str(i_antinode) + " Adding pos " + pos.pos_str() + " with slope " + str(slope_1) + " form " + a1.name() + " at " + a1.pos_str() + " and co-existing with " + a2.name() + " at " + a2.pos_str())
+                                a_antinodes.append(pos)
+                            #else:
+                            #    result_str = str(i_antinode) + " Skipping pos " + pos.pos_str() + " with slope " + str(slope_1) + " form " + a1.name() + " at " + a1.pos_str() + " and at slope " + str(slope_2) + " from " + a2.name() + " at " + a2.pos_str())
+                        x_p+=1
+                    y_p+=1
+
 
 if __name__=='__main__':
     #file_name="sample_input.txt"
+    #file_name="sample_input_2.txt"
     file_name="puzzle_input.txt"
     f_handle=open(file_name,'r')
     lines=[]
@@ -129,4 +163,7 @@ if __name__=='__main__':
         y_pos+=1 # increment y-coordinate counter
     #####################################
     # solve day-8 part1
-    solve_day_8_part1(antennas, nLines)
+    #solve_day_8_part1(antennas, nLines)
+    #####################################
+    # solve day-8 part2
+    solve_day_8_part2(antennas, nLines)
