@@ -10,6 +10,16 @@ class PosType:
         return "(" + str(self._x) + "," + str(self._y) + ")"
 
 
+def is_pos_in_poslist(pos0, pos_list):
+    is_same=0
+    for lpos in pos_list:
+        x_same=lpos._x==pos0._x
+        y_same=lpos._y==pos0._y
+        if x_same and y_same:
+            is_same=1
+            break
+    return is_same
+
 def solve_day10_part1(file_name):
     # read lines
     lines=[]
@@ -46,8 +56,6 @@ def solve_day10_part1(file_name):
     for pos_th in pos_trail_head:
         # storage and flags for storing trail-ends
         p_trailends=[]
-        x_trailend=-99
-        y_trailend=-99
         # flag to be used as while loop
         not_done=1
         trail_pos_list=[] # storage of latest position
@@ -87,16 +95,17 @@ def solve_day10_part1(file_name):
                         # compare expected num with the num in the list
                         old_num=int(c_old_num)
                         if new_num==old_num+1:
-                            print("Found ", c_new_num + " at (" + str(x) + "," + str(y) + ") !")
+                            str0 = "Found " + str(c_new_num) + " at (" + str(x) + "," + str(y) + ") !"
                             candidate_pos.append(tpos)
                             if c_new_num=='9':
                                 not_done=0
-                                if x!=x_trailend and y!=y_trailend:
+                                str0 += "\nChecking if the position already exists ..."
+                                if not is_pos_in_poslist(PosType(x,y),p_trailends):
                                     p_trailends.append(tpos)
-                                    str1 ="Found end " + tpos.pos_str() + " for trail with head " + pos_th.pos_str()
-                                    print(str1)
-                                x_trailend=x
-                                y_trailend=y
+                                    str0 +="\tAdding trail end " + tpos.pos_str() + " for trail with head " + pos_th.pos_str()
+                                else:
+                                    str0 += "\tSkipping as already added...."
+                                print(str0)
                                 #str1 += " and till now total trails=", n_alltrails)
                                 #print(str1)
                         else: #bad path
@@ -120,7 +129,11 @@ def solve_day10_part1(file_name):
 
 if __name__=='__main__':
     start_time = time.time()
-    file_name="sample_input_2.txt"
+    #file_name="sample_input_2.txt"
+    #file_name="sample_input_3.txt"
+    #file_name="sample_input_4.txt"
     #file_name="sample_input.txt"
-    #file_name="puzzle_input.txt"
+    file_name="puzzle_input.txt"
     solve_day10_part1(file_name)
+    tot_time = time.time() - start_time
+    print('Total time take: {:.10}'.format(tot_time), " seconds")
