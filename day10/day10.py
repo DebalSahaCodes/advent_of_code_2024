@@ -51,7 +51,8 @@ def solve_day10_part1(file_name):
                 pos_trail_head.append(pos)
                 print("Trail head at " + pos.pos_str() + " added ...")
     # iterate over all the trail-head positions
-    n_alltrails=0
+    c_alltrails=0 # rating for trails starting at one given head [one for each iteration]
+    n_alltrails=0 # total of all the ratings from all the trails in the map
     n_trailends_score=0
     for pos_th in pos_trail_head:
         # storage and flags for storing trail-ends
@@ -119,12 +120,14 @@ def solve_day10_part1(file_name):
             for p in candidate_pos:
                 str1 += p.pos_str() + " "
             print(str1 + "\n")
-        n_alltrails = len(candidate_pos)
-        #print("\n Total trails for pos at " + pos_th.pos_str() + " :" + str(n_alltrails))
+        c_alltrails = len(candidate_pos)
+        print("\n Total trails starting with head at " + pos_th.pos_str() + " :" + str(c_alltrails))
+        n_alltrails += c_alltrails
         t_score=len(p_trailends)
-        print("\n Total trails ends at " + pos_th.pos_str() + " :" + str(t_score))
+        print("\n No. of distinct trails ends at " + pos_th.pos_str() + " :" + str(t_score))
         n_trailends_score += t_score
-    print("\n\n\n TOTAL SCORE: " + str(n_trailends_score))
+    print("\n\n\n (solution day10 part1) TOTAL SCORE: " + str(n_trailends_score))
+    print("\n\n\n (solution day10 part2) TOTAL RATINGS: " + str(n_alltrails))
 
 
 if __name__=='__main__':
@@ -132,8 +135,9 @@ if __name__=='__main__':
     #file_name="sample_input_2.txt"
     #file_name="sample_input_3.txt"
     #file_name="sample_input_4.txt"
+    #file_name="sample_input_5.txt"
     #file_name="sample_input.txt"
     file_name="puzzle_input.txt"
     solve_day10_part1(file_name)
     tot_time = time.time() - start_time
-    print('Total time take: {:.10}'.format(tot_time), " seconds")
+    print('\nTotal time take: {:.10}'.format(tot_time), " seconds")
