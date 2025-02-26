@@ -9,10 +9,35 @@
 #include<algorithm>
 #include<execution>
 #include<mutex>
+#include<sstream>
+#include<map>
 
 using STRLST=std::list<std::string>;
 using STRITR=std::list<std::string>::iterator;
 
+void str_time_spent(const std::chrono::time_point<std::chrono::high_resolution_clock>& start, std::stringstream& sstrm)
+{
+  auto end = std::chrono::high_resolution_clock::now();
+  auto tim = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  std::string unit = " ms";
+  if(tim>3600000) // hour
+  {
+      tim = std::chrono::duration_cast<std::chrono::hours>(end - start).count();
+      unit = " hr";
+  }
+  else if(tim>60000) // min
+  {
+      tim = std::chrono::duration_cast<std::chrono::minutes>(end - start).count();
+      unit = " min";
+  }
+  else if(tim>1000)
+  {
+      tim = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+      unit = " sec";
+  }
+  sstrm << tim << unit;
+}
+  
 
 bool get_num_str_list(const std::string&  file_path, STRLST& str_lst)
 {
@@ -65,7 +90,6 @@ char get_char_from_num(int c)
         default: return '0';
     }
 }
-
 
 std::string add_two_strings(const std::string& string1, const std::string& string2, std::string& errlst)
 {
@@ -199,6 +223,9 @@ bool apply_rule_1(STRITR& itr)
     }
 }
 
+
+std::map<std::string, std::list<std::string>> g_map_rule2;
+
 // splits the num-string in two
 bool apply_rule_2(STRITR& itr, STRLST& lst)
 {
@@ -212,6 +239,32 @@ bool apply_rule_2(STRITR& itr, STRLST& lst)
 
         if(itr->size()%2==0)
         {
+            // check if the global "map" for rule-2 has the input already
+            auto mapI = g_map_rule2.find(*itr);
+            if(g_map_rule2.end() != mapI)
+            {
+                *itr = mapI->second.front();
+                try{
+                      std::string str2 = mapI->second.back();
+                      if(itr != std::prev(lst.end()))
+                      {
+                          // find the later-half string insertion position
+                          auto itr_insert = std::next(itr);
+                          // insert the later-half string in the list
+                          lst.insert(itr_insert, str2);
+                      }
+                      else
+                      {
+                          lst.emplace_back(str2);
+                      }
+                }
+                catch(...){
+                  std::cout<<"\n FAiled to Insert from MAp";
+                  throw;
+                }
+                return true;
+            }
+          
             // find middle position 
             size_t pos_mid = itr->size()/2;  //std::cout<< "; mid pos : " << pos_mid;
             std::string str2; // used for the later half of string
@@ -225,10 +278,14 @@ bool apply_rule_2(STRITR& itr, STRLST& lst)
                 std::cout << "\n Failed to create string part-2 using pos "
                           << pos_mid << " from \"" << itrbkup << "\" ; ";
             }
+            // create a list of str to store in global-map of rule-2 results
+            std::list<std::string> ans;
             // make the current string first-half
             try
             {
                 *itr=itr->substr(0, pos_mid);
+                ans.emplace_back(*itr);
+                ans.emplace_back(str2);
             }
             catch(...)
             {
@@ -333,6 +390,8 @@ void perform_stone_blinks(const int blink_count, STRLST& numstr_list, int& idx_c
     bool is_limit = false;
     bool is_dumped = false;
     size_t n_stonescount = 0;
+        
+    auto start = std::chrono::high_resolution_clock::now();
     while(idx_counter <= blink_count)
     {
         g_stonescount.clear();
@@ -360,8 +419,9 @@ void perform_stone_blinks(const int blink_count, STRLST& numstr_list, int& idx_c
                 throw;
             }
         }
-
-        std::cout << "\n\t completed blink  " << idx_counter << " and stones count: ";
+        std::stringstream s;
+        str_time_spent(start, s);
+        std::cout << "\n\t completed blink  " << idx_counter << " in " << s.str() << " and stones count: ";
 
         if(is_limit)
         {
@@ -434,7 +494,7 @@ bool dump_strlist_to_filepath(
         if(fH.is_open())
         {
             for(const auto& s : str_list)
-                fH << s + "\n";
+                fH << s + " ";
 
             fH.close();
             is_done = true;
@@ -520,6 +580,7 @@ void perform_stone_blinks_in_files(const int blink_count, STRLST& numstr_list, i
     bool is_dumped = false;
     size_t n_stonescount = 0;
     std::string stones;
+    auto start = std::chrono::high_resolution_clock::now();
 
     while(idx_counter <= blink_count)
     {
@@ -547,8 +608,9 @@ void perform_stone_blinks_in_files(const int blink_count, STRLST& numstr_list, i
                 throw;
             }
         }
-
-        std::cout << "\n\t completed blink  " << idx_counter << " and stones count: ";
+        std::stringstream s;
+        str_time_spent(start, s);
+        std::cout << "\n\t completed blink  " << idx_counter << " in " << s.str() << " and stones count: ";
 
         if(is_limit)
         {
@@ -647,6 +709,7 @@ void perform_stone_blinks_in_files(const int blink_count, STRLST& numstr_list, i
                 std::cout <<"\n FAILEd TO gENERATE files from string..... ABORT!!!!\n";
                 throw;
             }
+
         }
     }
     --idx_counter; // making the counter point to the correct no. of iterations ran in the while-loop
@@ -719,7 +782,7 @@ int main(int argc, char** argv)
         std::cout << "\n Failed at idx \"" << curr_idx << " \" !!!\n\n";
     }
 
-    auto end_time = std::chrono::high_resolution_clock::now();
+    /*auto end_time = std::chrono::high_resolution_clock::now();
 
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
     auto duration__s = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
@@ -727,7 +790,10 @@ int main(int argc, char** argv)
     bool is_sec = duration__s > 0;
     auto duration = (is_sec ? duration__s : duration_ms);
 
-    std::cout << "\nTime taken: " << duration << (is_sec ? " s" : " ms") << "\n";
+    std::cout << "\nTime taken: " << duration << (is_sec ? " s" : " ms") << "\n";*/
+    std::stringstream s;
+    str_time_spent(start_time, s);
+    std::cout << "\nTime taken: " << s.str() << "\n";
 
     return 0;
 }
