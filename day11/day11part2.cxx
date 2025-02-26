@@ -284,8 +284,10 @@ bool apply_rule_2(STRITR& itr, STRLST& lst)
             try
             {
                 *itr=itr->substr(0, pos_mid);
+                // create the result lsit and add to global map; waiting for second-part insert to list isn't needed
                 ans.emplace_back(*itr);
                 ans.emplace_back(str2);
+                g_map_rule2.insert({itrbkup, ans});
             }
             catch(...)
             {
