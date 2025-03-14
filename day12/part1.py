@@ -1,28 +1,45 @@
 from collections import defaultdict
 
-class AreaElement:
-    m_c='-'
-    m_has_lt=-1
-    m_has_rt=-1
-    m_has_up=-1
-    m_has_dn=-1
-    m_pos_x=-1
-    m_pos_y=-1
-    def __init__(self,c,lt,rt,up,dn,px,py):
-        self.m_c=c
-        self.m_has_lt=lt
-        self.m_has_rt=rt
-        self.m_has_up=up
-        self.m_has_dn=dn
-        self.m_pos_x=px
-        self.m_pos_y=py
+class PosType:
+    m_x=-1
+    m_y=-1
+    def __init__(self, x, y):
+        self.m_x=x
+        self.m_y=y
 
 
-def area_list_connected_to_e(area_list, e:AreaElement):
-    is_connected=0
+class AreaType:
+    m_char=''
+    m_pos_list=[]
+    def insert_pos(self, pos:PosType):
+        m_pos_list.append(pos)
+    def view_char(self):
+        return self.m_char
+    def view_count(self):
+        return len(m_pos_list)
+    def is_within_area(self, posObj):
+        pass
+
+def populate_char_pos_map(char_pos_map, lines):
+    pos_y=0
+    for line in lines:
+        #print("Processing line ", pos_y)
+        pos_x=0
+        for c in line:
+            if c !='\n':
+                char_pos_map[c].append(PosType(pos_x,pos_y))
+            pos_x +=1
+        pos_y+=1
+
+
+def get_perimeter_value_for_pos(pos:PosType, pos_list):
+    has_up=0
+    has_dn=0
+    has_rt=0
+    has_lt=0
     # take the x,y for the given element
-    pos_x=e.m_pos_x
-    pos_y=e.m_pos_y
+    pos_x=pos.m_x
+    pos_y=pos.m_y
     # Up
     up_x=pos_x
     up_y=pos_y-1
@@ -36,106 +53,94 @@ def area_list_connected_to_e(area_list, e:AreaElement):
     lt_x=pos_x-1
     lt_y=pos_y
     # ietrate over all elements in the list to check if any adjacent
-    for a in area_list:
-        is_same_up = up_x==a.m_pos_x and up_y==a.m_pos_y
-        is_same_dn = dn_x==a.m_pos_x and dn_y==a.m_pos_y
-        is_same_rt = rt_x==a.m_pos_x and rt_y==a.m_pos_y
-        is_same_lt = lt_x==a.m_pos_x and lt_y==a.m_pos_y
-        is_connected = is_same_up or is_same_dn or is_same_rt or is_same_lt
-        if is_connected:
-            return 1
-    return is_connected
-
-
-def add_to_area_dict(area_dict, area_c, area_e:AreaElement):
-    dict={}
-    is_inserted=0
-    is_merging=0
-    x_a_char='' # to be removed post merge
-    n_char=0 # default index added to character when mapping to area-dict
-    for ad in area_dict:
-        # the key in dict is of format CHAR_NUM e.g. "C_10"
-        # split the key with "_" as delimiter;so 
-        # - CHAR="C" 
-        # - NUM="11"
-        ad_str=ad.split('_')
-        if len(ad_str)<=1:
-            print("BAD DICT ELEMENT CHAR", ad,"\nEXITING...")
-            exir()
-        a_chr=ad_str[0]
-        a_num=int(ad_str[1])
-        # if the CHAR part matches the current character in AreaElement
-        if a_chr==area_c:
-            # if area to which current element is connected, is found, then insert
-            if area_list_connected_to_e(area_dict[ad], area_e):
-                if not is_inserted:
-                    print("\tAdding to ", ad)
-                    area_dict[ad].append(area_e)
-                    is_inserted = 1
-                    # store the index in a local dict for next iteration
-                    dict[area_c] = ad#int(ad_str[1])
-                    continue
-                else:
-                    is_merging=1 # already inserted and found connected to current area
-                    print("\tMerging ", ad, " into ", dict[area_c])
-                    for t in area_dict[ad]:
-                        area_dict[dict[area_c]].append(t)
-                    x_a_char = ad # set the merged list for removal
-            else: #if not connected
-                n_char+=1
-
-    if not is_inserted:
-        print("\tInsert ",area_c + '_' + str(n_char))
-        area_dict[area_c + '_' + str(n_char)].append(area_e)
-
-    if x_a_char and is_merging: # if non empty list remaining that was merged then pop from area_dict
-        print("\tRemoving merged list ", x_a_char)
-        area_dict.pop(x_a_char)
-
-
-
-def get_elemnent(element, pos_x, pos_y, lines):
-    str1=""
-    min_x=0
-    min_y=0
-    max_x=len(lines[0])-1 # as there is "\n" as extra character
-    max_y=len(lines)
-    up_x=pos_x
-    up_y=pos_y-1
-    dn_x=pos_x
-    dn_y=pos_y+1
-    rt_x=pos_x+1
-    rt_y=pos_y
-    lt_x=pos_x-1
-    lt_y=pos_y
-    has_up=up_x>=0 and up_x<max_x and up_y>=0 and up_y<max_y and lines[up_y][up_x]==element
-    has_dn=dn_x>=0 and dn_x<max_x and dn_y>=0 and dn_y<max_y and lines[dn_y][dn_x]==element
-    has_rt=rt_x>=0 and rt_x<max_x and rt_y>=0 and rt_y<max_y and lines[rt_y][rt_x]==element
-    has_lt=lt_x>=0 and lt_x<max_x and lt_y>=0 and lt_y<max_y and lines[lt_y][lt_x]==element
-    #if has_up:
-    #    str1 +=" has_up"
-    #if has_dn:
-    #    str1 +=" has_dn"
-    #if has_rt:
-    #    str1 +=" has_rt"
-    #if has_lt:
-    #    str1 +=" has_lt"
-    #print(element, str1)
-    return AreaElement(element,has_lt,has_rt,has_up,has_dn,pos_x,pos_y)
-
-
-def get_perimeter_value_for_element(ar_el:AreaElement):
+    for a in pos_list:
+        if not has_up and up_x==a.m_x and up_y==a.m_y:
+            has_up = 1
+        if not has_dn and dn_x==a.m_x and dn_y==a.m_y:
+            has_dn =1
+        if not has_rt and rt_x==a.m_x and rt_y==a.m_y:
+            has_rt =1
+        if not has_lt and lt_x==a.m_x and lt_y==a.m_y:
+            has_lt=1
+    # calculate
     n_perimeter_val=0
-    if not ar_el.m_has_up:
+    if not has_up:
         n_perimeter_val+=1
-    if not ar_el.m_has_dn:
+    if not has_dn:
         n_perimeter_val+=1
-    if not ar_el.m_has_rt:
+    if not has_rt:
         n_perimeter_val+=1
-    if not ar_el.m_has_lt:
+    if not has_lt:
         n_perimeter_val+=1
     return n_perimeter_val
 
+def pos_connected_to_area(pos:PosType, areaAsPosList):
+    is_connected=0
+    # take the x,y for the given element
+    pos_x=pos.m_x
+    pos_y=pos.m_y
+    # Up
+    up_x=pos_x
+    up_y=pos_y-1
+    # Down
+    dn_x=pos_x
+    dn_y=pos_y+1
+    # right
+    rt_x=pos_x+1
+    rt_y=pos_y
+    # Left
+    lt_x=pos_x-1
+    lt_y=pos_y
+    for a in areaAsPosList:
+        has_up = up_x==a.m_x and up_y==a.m_y
+        has_dn = dn_x==a.m_x and dn_y==a.m_y
+        has_rt = rt_x==a.m_x and rt_y==a.m_y
+        has_lt = lt_x==a.m_x and lt_y==a.m_y
+        is_connected = has_up or has_dn or has_rt or has_lt
+        if is_connected:
+            break
+    return is_connected
+
+def create_areas_from_char_pos_map(char, pos_list, areas):
+    merge_1="-"
+    merge_2="-"
+    merge_p=[]
+    print("Processing map of ", char)
+    for cPos in pos_list:
+        is_added=0
+        if areas:
+            for areaC in areas:
+                if pos_connected_to_area(cPos, areas[areaC]):
+                    if is_added: # connected but previously added to some other area
+                        print("Found another connection in ", areaC)
+                        merge_1=areaC
+                    else: # not added
+                        print("\tAdding to ", areaC)
+                        areas[areaC].append(cPos)
+                        merge_2=areaC
+                        is_added=1
+                if merge_1!="-" and merge_2!="-":
+                    print("\tMerging ", merge_1, " and ", merge_2)
+                    for mPos in areas[merge_2]:
+                        areas[merge_1].append(mPos)
+                    areas[merge_2]=[]
+                    merge_p.append(merge_2)
+                    merge_1="-"
+                    merge_2="-"
+        if not is_added:
+            key_str = str(len(areas)+1)
+            print("\tAdding to ", key_str)
+            areas[key_str].append(cPos)
+    for n in merge_p:
+        areas.pop(n)
+
+
+def cost_for_areas(dict_areas):
+    cost = 0
+    for area_c in dict_areas:
+        p_list = dict_areas[area_c]
+        for pos in p_list:
+            get_perimeter_value_for_pos(pos, p_list)
 
 if __name__=='__main__':
 
@@ -146,28 +151,31 @@ if __name__=='__main__':
     lines = fH.readlines()
     fH.close()
 
-    areas=defaultdict(list)
-    pos_y=0
-    for line in lines:
-        print("Processing line ", pos_y)
-        pos_x=0
-        for c in line:
-            if c !='\n':
-                e = get_elemnent(c, pos_x, pos_y, lines)
-                add_to_area_dict(areas, c, e)
-            pos_x +=1
-        pos_y+=1
+    map_char_pos = defaultdict(list)
+    populate_char_pos_map(map_char_pos, lines)
+    for m in map_char_pos:
+        print(m,": ", len(map_char_pos[m]))
 
+    str_res=[]
+    n_area_cost=0
 
-    total_cost=0
-    for area_l in areas:
-        area_c = area_l
-        area_p = areas[area_l]
-        area_v = len(area_p)
-        #print("Area for \"",area_c,"\" is ->", area_v)
-        peri=0
-        for e in area_p:
-            peri += get_perimeter_value_for_element(e)
-        print("Region ", area_c," with price ",area_v,"*", peri," = ",area_v*peri)
-        total_cost += area_v*peri
-    print("\n\nTotal_cost: ", total_cost)
+    for m in map_char_pos:
+        areas=defaultdict(list)
+        create_areas_from_char_pos_map(m, map_char_pos[m], areas)
+        for a in areas:
+            area_count = len(areas[a])
+            p=0
+            peri=0
+            for c in areas[a]:
+                peri = get_perimeter_value_for_pos(c, areas[a])
+                #print("perimeter for pos ", c.m_x, ",",c.m_y," is ", peri)
+                p+=peri
+            i_area_cost = area_count*p
+            str_res.append("Region " + m + " " + str(area_count) + "*" + str(p) + "=" + str(i_area_cost))
+            n_area_cost += i_area_cost
+
+    print("\n")
+    for str1 in str_res:
+        print(str1)
+    
+    print("\n\nTOTAL COST: ", n_area_cost)
