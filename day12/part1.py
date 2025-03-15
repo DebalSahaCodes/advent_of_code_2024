@@ -7,19 +7,6 @@ class PosType:
         self.m_x=x
         self.m_y=y
 
-
-class AreaType:
-    m_char=''
-    m_pos_list=[]
-    def insert_pos(self, pos:PosType):
-        m_pos_list.append(pos)
-    def view_char(self):
-        return self.m_char
-    def view_count(self):
-        return len(m_pos_list)
-    def is_within_area(self, posObj):
-        pass
-
 def populate_char_pos_map(char_pos_map, lines):
     pos_y=0
     for line in lines:
@@ -133,14 +120,6 @@ def create_areas_from_char_pos_map(char, pos_list, areas):
             areas[key_str].append(cPos)
     for n in merge_p:
         areas.pop(n)
-
-
-def cost_for_areas(dict_areas):
-    cost = 0
-    for area_c in dict_areas:
-        p_list = dict_areas[area_c]
-        for pos in p_list:
-            get_perimeter_value_for_pos(pos, p_list)
 
 if __name__=='__main__':
 
