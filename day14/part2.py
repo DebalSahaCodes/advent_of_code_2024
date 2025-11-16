@@ -85,9 +85,6 @@ n_quad_4=0
 if __name__=='__main__':
     d_lines=[]
     file_name="puzzle.txt"
-    #file_name="sample1.txt"
-    n_seconds=100 # total time elapsed
-
     fH = open(file_name, "r")
     d_lines= fH.readlines()
     fH.close()
@@ -121,6 +118,9 @@ if __name__=='__main__':
     for idx_col in range(n_posY):
         quad_bdry_pos.append(PosType(idx_col, midY))
 
+    #file_name="sample1.txt"
+    n_seconds=100 # total time elapsed
+
     # get the x-pos and y-pos for all robots
     # after n_seconds have elapsed
     rob_x=bad_val
@@ -134,41 +134,54 @@ if __name__=='__main__':
             all_rob_pos.append(r_pos)
         #print("added robot pos at:", r_pos.get_str())
 
-    pos_list=[]
-    # print with sots/stars to init
-    for x in range(n_posX):
-        loc_list=[]
-        for y in range(n_posY):
-            loc_list.append(bad_val)
-        pos_list.append(loc_list)
-    print("n.Col for POS_LIST:",len(pos_list[0]))
-    print("n.Row for POS_LIST:",len(pos_list))
-    print
-    print("CURRENT VAL AT X:",xMax," Y:", yMax," is ->", pos_list[xMax][yMax])
-    #exit()
-    for rpos in all_rob_pos:
-        if rpos.x>xMax:
-            print("Bad x val: ", pos.x)
-            exit()
-        elif rpos.y>yMax:
-            print("Bad y val: ", pos.y)
-            exit()
-        # Now check if the value is valid robot pos
-        print("processing rpos.x:", rpos.x," rpos.y:", rpos.y)
-        if pos_list[rpos.x][rpos.y]==bad_val:
-            pos_list[rpos.x][rpos.y]=1
-        else:
-            pos_num = pos_list[rpos.x][rpos.y]
-            pos_num += 1
-            pos_list[rpos.x][rpos.y] = pos_num
-    file_name_out="robots_"+str(n_seconds)+"s.txt"
-    file = open(file_name_out, 'w')
-    for pos_line in pos_list:
-        line=""
-        for pos in pos_line:
-            if pos==bad_val:
-                line+='*'
+    #---------------------------------------------
+    # print the positions to a file .............
+    #---------------------------------------------
+    is_print_output=1 # flag to print to file
+    #---------------------------------------------
+    # Logic here .....
+    if is_print_output:
+        pos_list=[]
+        # print with sots/stars to init
+        for x in range(n_posX):
+            loc_list=[]
+            for y in range(n_posY):
+                loc_list.append(bad_val)
+            pos_list.append(loc_list)
+        print("n.Col for POS_LIST:",len(pos_list[0]))
+        print("n.Row for POS_LIST:",len(pos_list))
+        print
+        #print("CURRENT VAL AT X:",xMax," Y:", yMax," is ->", pos_list[xMax][yMax])
+        #exit()
+        for rpos in all_rob_pos:
+            if rpos.x>xMax:
+                print("Bad x val: ", pos.x)
+                exit()
+            elif rpos.y>yMax:
+                print("Bad y val: ", pos.y)
+                exit()
+            # Now check if the value is valid robot pos
+            #print("processing rpos.x:", rpos.x," rpos.y:", rpos.y)
+            if pos_list[rpos.x][rpos.y]==bad_val:
+                pos_list[rpos.x][rpos.y]=1
             else:
-                line+=str(pos)
-        file.write(line +'\n')
-    file.close()
+                pos_num = pos_list[rpos.x][rpos.y]
+                pos_num += 1
+                pos_list[rpos.x][rpos.y] = pos_num
+        file_name_out="robots_"+str(n_seconds)+"s.txt"
+        file = open(file_name_out, 'w')
+        for pos_line in pos_list:
+            line=""
+            for pos in pos_line:
+                if pos==bad_val:
+                    line+='*'
+                else:
+                    line+=str(pos)
+            file.write(line +'\n')
+        file.close()
+        print("Printed the positions grid in file \"", file_name_out,"\"\n")
+    #---------------------------------------------
+
+    # count filled pos in each line
+    
+    
