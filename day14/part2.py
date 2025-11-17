@@ -219,7 +219,7 @@ if __name__=='__main__':
                         else:
                             curr_joined=0 # reset current density recorder as soon as first sparse data found
                     if high_joined >= pos_limit - pos_tolrn:
-                        print("Found dense row at (", i_pos_x, ",", i_pos_y")")
+                        print("Found dense row at (", i_pos_x, ",", i_pos_y, ")")
                         found_sec=i_sec
                         return found_sec
                 x_processed += 1
