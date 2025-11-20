@@ -165,6 +165,7 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
     new_posx=rpos_x
     new_posy=rpos_y
     print("Inc from pos (", rpos_x,",",rpos_y,")")
+    #----------------------------------------------------------------------
     # depending on x or y increment, traverse the row or col
     # and keep stoing the symbols encountered in the positions
     # till the symbol is '#' or '.'
@@ -192,6 +193,7 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
             puzzle_lines[rpos_y][rpos_x]='.'
             new_posx=rpos_x + inc_x
             new_posy=rpos_y
+    #----------------------------------------------------------------------
     elif inc_y!=0:
         # compute if move is possible and set the flag "is_move" if so
         curr_pos=rpos_y
@@ -203,18 +205,126 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
                 is_move=1
                 break
             curr_pos = curr_pos + inc_y
-        if is_move:
-            #print("Moving robot using move ", c_move, " as \".\" found in (",rpos_x,",",curr_pos,"}")
-            while curr_pos != rpos_y and curr_pos<yMax and curr_pos>0:
-                #print("\t replacing pos (",rpos_x,",",curr_pos,")", puzzle_lines[curr_pos][rpos_x], "with pos (", rpos_x,",",curr_pos-inc_y,") ",puzzle_lines[curr_pos-inc_y][rpos_x])
-                puzzle_lines[curr_pos][rpos_x]=puzzle_lines[curr_pos-inc_y][rpos_x]
-                curr_pos -= inc_y
+        #--------------------------
+        # check if the found position is just one step ahead for robot
+        if curr_pos==rpos_y+inc_y: # yes it is
+            puzzle_lines[rpos_y+inc_y][rpos_x]=puzzle_lines[rpos_y][rpos_x]
             puzzle_lines[rpos_y][rpos_x]='.'
+            is_move=1
+        #--------------------------
+        else:
+            #--------------------------
+            dict_y_vs_xposList={}
+            #--------------------------
+            if is_move:
+                # collect all the obstacles ahead of the robot till the position of found DOT
+                index_y=rpos_y+inc_y
+                final_y=curr_pos
+                if inc_y==-1:
+                    final_y=1 # if going UP
+                # iterate through each y (i.e. each row)
+                #-----------------------------------------------------------
+                while index_y != final_y and index_y>=1 and index_y<yMax:
+                    print("Checking for index_y=", index_y, " with final_y=", final_y)
+                    t_poslist=[]
+                    #-----------------------------------------------------------
+                    if len(dict_y_vs_xposList.keys())==0: # if empty
+                        #first row ahead of robot, so capture the immediate obstacle's
+                        #position with the right/left position depending which one completes it
+                        t_poslist.append(rpos_x) #add current
+                        if puzzle_lines[index_y][rpos_x]==']':
+                            t_poslist.append(rpos_x-1) # add left
+                        elif puzzle_lines[index_y][rpos_x]=='[':
+                            t_poslist.append(rpos_x+1) # or add right
+                    else:
+                        x_pos_list=dict_y_vs_xposList[index_y-inc_y] # take last entered x-positions
+                        for xpos in x_pos_list:
+                            c_sym=puzzle_lines[index_y][xpos]
+                            o_sym=puzzle_lines[index_y-inc_y][xpos]
+                            if c_sym==']' or c_sym=='[':
+                                t_poslist.append(xpos) #add current
+                                #add the opposit side if curr_sym != old_sym in same column
+                                if o_sym!=c_sym: #if not same then adjacent obstacle needs to be added as well
+                                    if c_sym==']':
+                                        t_poslist.append(xpos-1) # add left
+                                    elif c_sym=='[':
+                                        t_poslist.append(xpos+1) # or add right
+                                else: # if same symbol then the opposite side will be added in next iteration
+                                    pass
+                                #    if o_sym==']': #i.e. so old has a left; so adjacent left obstacle to be taken
+                                #        t_poslist.append(xpos-1) # add right of left obs
+                                #        t_poslist.append(xpos-2) # add left of left obs
+                                #    elif o_sym=='[': #i.e. so old has a right; so adjacent rightobstacle to be taken
+                                #        t_poslist.append(xpos+1) # add right of right obs
+                                #        t_poslist.append(xpos+2) # add left of right obs
+                    #-----------------------------------------------------------                
+                    # add the currently generated list of x-positions to dict against the KEY of current Y-pos
+                    if len(t_poslist)>0:
+                        dict_y_vs_xposList[index_y]=t_poslist
+                        #str1=""
+                        #for x in t_poslist:
+                        #    str1 += " (" + str(x) + "," + str(index_y) + ")"
+                        #print("Added following positions for y=",index_y,":\n", str1, "\n\n")
+                    # increment the index-Y iterator
+                    index_y += inc_y
+                #-----------------------------------------------------------
+            #--------------------------
+            #str1=""
+            #for k,v in dict_y_vs_xposList.items():
+            #    for x in v:
+            #        str1 += " (" + str(x) + "," + str(k) + ")"
+            #    str1+"\n"
+            #print("All collected positions:\n", str1)
+            #exit()
+            #--------------------------
+            # Iterate over the keys (y-pos) and value (list of x-pos) for obstacle positions
+            # verify that it has a space in front of it to move to
+            # if any osbtacle is moved then rest the flag "is_move" to 0
+            
+            keys=dict_y_vs_xposList.keys()
+            #iterate in reverse order, last list of obstacles first
+            revers_keys=list(reversed(keys))
+            for c_key in revers_keys:
+                #c_key=keys[len(keys)-1-i_key]
+                x_lst=dict_y_vs_xposList[c_key]
+                curr_y=c_key
+                for curr_x in x_lst:
+                    in_front_y=curr_y+inc_y
+                    in_front_x=curr_x
+                    #if any obstacle part sees a border/hurdle i.e. "#" then whole thing can't move
+                    if puzzle_lines[in_front_y][in_front_x]=='#':
+                        is_move=0
+            #--------------------------
+            if is_move:
+                #print("Moving robot using move ", c_move)
+                keys=dict_y_vs_xposList.keys()
+                #iterate in reverse order, last list of obstacles first
+                revers_keys=list(reversed(keys))
+                #----------------------------------------------------------
+                for c_key in revers_keys:
+                    #c_key=keys[len(keys)-1-i_key]
+                    x_lst=dict_y_vs_xposList[c_key]
+                    curr_y=c_key
+                    for curr_x in x_lst:
+                        newo_y=curr_y+inc_y
+                        newo_x=curr_x
+                        print("\t replacing pos (",newo_x,",",newo_y,")", puzzle_lines[newo_y][newo_x], "with pos (", curr_x,",",curr_y,") ",puzzle_lines[curr_y][curr_x])
+                        puzzle_lines[newo_y][newo_x]=puzzle_lines[curr_y][curr_x]
+                        puzzle_lines[curr_y][curr_x]='.'
+                #move the robot from the last position
+                puzzle_lines[rpos_y+inc_y][rpos_x]='@'
+                puzzle_lines[rpos_y][rpos_x]='.'
+                #----------------------------------------------------------
+            #--------------------------
+        #--------------------------
+        if is_move:
             new_posx=rpos_x
             new_posy=rpos_y + inc_y
+    #----------------------------------------------------------------------
     else:
         print("Bad inc of x or y")
         exit()
+    #----------------------------------------------------------------------
 
     strR=""
     if 0==is_move:
