@@ -7,7 +7,7 @@ c_stopc='#'
 xMax=-1
 yMax=-1
 
-file_name="sample3.txt"
+file_name="sample1.txt"
 ctempL=[]
 fH=open(file_name, 'r')
 ctempL=fH.readlines()
@@ -164,7 +164,7 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
     is_move=0
     new_posx=rpos_x
     new_posy=rpos_y
-    print("Inc from pos (", rpos_x,",",rpos_y,")")
+    print("Inc from pos (", rpos_x,",",rpos_y,") with ", i_move," move of \"",c_move,"\"")
     #----------------------------------------------------------------------
     # depending on x or y increment, traverse the row or col
     # and keep stoing the symbols encountered in the positions
@@ -207,10 +207,11 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
             curr_pos = curr_pos + inc_y
         #--------------------------
         # check if the found position is just one step ahead for robot
-        if curr_pos==rpos_y+inc_y: # yes it is
-            puzzle_lines[rpos_y+inc_y][rpos_x]=puzzle_lines[rpos_y][rpos_x]
-            puzzle_lines[rpos_y][rpos_x]='.'
-            is_move=1
+        if curr_pos==rpos_y+inc_y:# yes it is
+            if puzzle_lines[rpos_y+inc_y][rpos_x] == '.':
+                puzzle_lines[rpos_y+inc_y][rpos_x]=puzzle_lines[rpos_y][rpos_x]
+                puzzle_lines[rpos_y][rpos_x]='.'
+                is_move=1
         #--------------------------
         else:
             #--------------------------
@@ -219,9 +220,9 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
             if is_move:
                 # collect all the obstacles ahead of the robot till the position of found DOT
                 index_y=rpos_y+inc_y
-                final_y=curr_pos
+                final_y=yMax
                 if inc_y==-1:
-                    final_y=1 # if going UP
+                    final_y=0
                 # iterate through each y (i.e. each row)
                 #-----------------------------------------------------------
                 while index_y != final_y and index_y>=1 and index_y<yMax:
@@ -237,7 +238,7 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
                         elif puzzle_lines[index_y][rpos_x]=='[':
                             t_poslist.append(rpos_x+1) # or add right
                     else:
-                        x_pos_list=dict_y_vs_xposList[index_y-inc_y] # take last entered x-positions
+                        x_pos_list=dict_y_vs_xposList[index_y-inc_y] # take last entered x-positions list
                         for xpos in x_pos_list:
                             c_sym=puzzle_lines[index_y][xpos]
                             o_sym=puzzle_lines[index_y-inc_y][xpos]
@@ -259,12 +260,15 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
                                 #        t_poslist.append(xpos+2) # add left of right obs
                     #-----------------------------------------------------------                
                     # add the currently generated list of x-positions to dict against the KEY of current Y-pos
-                    if len(t_poslist)>0:
+                    if len(t_poslist)==0 and len(dict_y_vs_xposList.keys())>0:
+                        print("FILLED")
+                        break
+                    else:
                         dict_y_vs_xposList[index_y]=t_poslist
-                        #str1=""
-                        #for x in t_poslist:
-                        #    str1 += " (" + str(x) + "," + str(index_y) + ")"
-                        #print("Added following positions for y=",index_y,":\n", str1, "\n\n")
+                        str1=""
+                        for x in t_poslist:
+                            str1 += " (" + str(x) + "," + str(index_y) + ")"
+                        print("Added following positions for y=",index_y,":\n", str1, "\n\n")
                     # increment the index-Y iterator
                     index_y += inc_y
                 #-----------------------------------------------------------
@@ -292,6 +296,7 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
                     in_front_y=curr_y+inc_y
                     in_front_x=curr_x
                     #if any obstacle part sees a border/hurdle i.e. "#" then whole thing can't move
+                    print("Checking for \"#\" in front of obs at (",str(in_front_x),",",in_front_y,")")
                     if puzzle_lines[in_front_y][in_front_x]=='#':
                         is_move=0
             #--------------------------
