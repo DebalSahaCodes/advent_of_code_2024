@@ -7,7 +7,7 @@ c_stopc='#'
 xMax=-1
 yMax=-1
 
-file_name="sample1.txt"
+file_name="puzzle.txt"
 ctempL=[]
 fH=open(file_name, 'r')
 ctempL=fH.readlines()
@@ -225,31 +225,51 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
                     final_y=0
                 # iterate through each y (i.e. each row)
                 #-----------------------------------------------------------
+                str1=""
+                #-----------------------------------------------------------
                 while index_y != final_y and index_y>=1 and index_y<yMax:
                     print("Checking for index_y=", index_y, " with final_y=", final_y)
                     t_poslist=[]
                     #-----------------------------------------------------------
+                    #str1="Added following positions for y=" + str(index_y) + " :\n"
                     if len(dict_y_vs_xposList.keys())==0: # if empty
                         #first row ahead of robot, so capture the immediate obstacle's
                         #position with the right/left position depending which one completes it
-                        t_poslist.append(rpos_x) #add current
-                        if puzzle_lines[index_y][rpos_x]==']':
-                            t_poslist.append(rpos_x-1) # add left
-                        elif puzzle_lines[index_y][rpos_x]=='[':
-                            t_poslist.append(rpos_x+1) # or add right
+                        #str1 +="1 empty: "
+                        if puzzle_lines[index_y][rpos_x] in ['[',']']:
+                            if rpos_x not in t_poslist:
+                                t_poslist.append(rpos_x) #add current
+                            str1 += " (" + str(rpos_x) + "," + str(index_y) + "), "
+                            if len(t_poslist)>=1:
+                                if puzzle_lines[index_y][rpos_x-1]=='[':
+                                    if rpos_x-1 not in t_poslist:
+                                        t_poslist.append(rpos_x-1) # add left
+                                        str1 += " (" + str(rpos_x-1) + "," + str(index_y) + "), "
+                                if puzzle_lines[index_y][rpos_x+1]==']':
+                                    if rpos_x+1 not in t_poslist:
+                                        t_poslist.append(rpos_x+1) # or add right
+                                        str1 += " (" + str(rpos_x+1) + "," + str(index_y) + "), "
+                    #-----------------------------------------------------------                
                     else:
+                        #str1 +="noEmpty: "
                         x_pos_list=dict_y_vs_xposList[index_y-inc_y] # take last entered x-positions list
                         for xpos in x_pos_list:
                             c_sym=puzzle_lines[index_y][xpos]
                             o_sym=puzzle_lines[index_y-inc_y][xpos]
                             if c_sym==']' or c_sym=='[':
-                                t_poslist.append(xpos) #add current
+                                if xpos not in t_poslist:
+                                    t_poslist.append(xpos) #add current
+                                    str1 += " (" + str(xpos) + "," + str(index_y) + ") "
                                 #add the opposit side if curr_sym != old_sym in same column
-                                if o_sym!=c_sym: #if not same then adjacent obstacle needs to be added as well
-                                    if c_sym==']':
-                                        t_poslist.append(xpos-1) # add left
-                                    elif c_sym=='[':
-                                        t_poslist.append(xpos+1) # or add right
+                                if o_sym!=c_sym and o_sym in ['[',']']: #if not same then adjacent obstacle needs to be added as well
+                                    if c_sym==']' and '['==puzzle_lines[index_y][xpos-1]:
+                                        if xpos-1 not in t_poslist:
+                                            t_poslist.append(xpos-1) # add left
+                                            str1 += " (" + str(xpos-1) + "," + str(index_y) + "), "
+                                    elif c_sym=='[' and ']'==puzzle_lines[index_y][xpos+1]:
+                                        if xpos+1 not in t_poslist:
+                                            t_poslist.append(xpos+1) # or add right
+                                            str1 += " (" + str(xpos+1) + "," + str(index_y) + "), "
                                 else: # if same symbol then the opposite side will be added in next iteration
                                     pass
                                 #    if o_sym==']': #i.e. so old has a left; so adjacent left obstacle to be taken
@@ -264,13 +284,18 @@ def update_board(i_move, c_move, rpos_x, rpos_y):
                         print("FILLED")
                         break
                     else:
+                        #print("Added following positions for y=",index_y,":\n", str1, "\n\n")
                         dict_y_vs_xposList[index_y]=t_poslist
-                        str1=""
-                        for x in t_poslist:
-                            str1 += " (" + str(x) + "," + str(index_y) + ")"
-                        print("Added following positions for y=",index_y,":\n", str1, "\n\n")
+                        t_poslist=[]
+                        #print("ADDED ", len(dict_y_vs_xposList.keys()), " KEYS!!\n\n")
+                        #str1=""
+                        #for x in t_poslist:
+                        #    str1 += " (" + str(x) + "," + str(index_y) + ")"
+                        #print("Added following positions for y=",index_y,":\n", str1, "\n\n")
                     # increment the index-Y iterator
+                    print("Added following positions for y=",index_y,":\n", str1, "\n\n")
                     index_y += inc_y
+                    str1=""
                 #-----------------------------------------------------------
             #--------------------------
             #str1=""
@@ -361,14 +386,36 @@ def print_final_board_print_lines():
 
 
 def compute_board_gps():
-    gps_all=0
-    for iy in range(yMax+1):
-        for ix in range(xMax+1):
-            sym=puzzle_lines[iy][ix]
-            if sym==c_mvbox:
-                gps_sym=100*iy + ix
-                gps_all += gps_sym
-    return gps_all
+    gps_sum=0
+    pos_x=-1
+    pos_y=-1
+    for line in puzzle_lines:
+        pos_y+=1
+        pos_x=0
+        if line[-1:]=='\n':
+            line=line[:-1]
+        for c in line:
+            if c=="[":
+                c_gps=100*pos_y + pos_x
+                print("for pos (",str(pos_x),",",str(pos_y),") gps result:",c_gps)
+                gps_sum += c_gps
+            pos_x+=1
+#    gps_all=0
+#    for iy in range(yMax+1):
+#        for ix in range(xMax+1):
+#            sym=puzzle_lines[iy][ix]
+#            if sym==c_mvbox:
+#                gps_sym=100*iy + ix
+#                gps_all += gps_sym
+#    return gps_all
+    return gps_sum
+
+#print("TOTAL GPS SUM:", gps_sum)
+
+
+
+
+
 
 
 idx_file_min=yMax+2
