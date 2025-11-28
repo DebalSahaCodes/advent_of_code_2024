@@ -109,22 +109,22 @@ void print_moves_list(const MVLIST& mvList){
     std::cout << "\n";
 }
 
-NUMTYPE calculate_score_of_moves_list(const MVLIST& mvList)
+NUMTYPE calculate_score_of_moves_list(const MVLIST& mvList, bool print=false)
 {
-    auto score_from_moves = [](const MovType& m0, const MovType& m1)->NUMTYPE{
+    auto score_from_moves = [&print](const MovType& m0, const MovType& m1)->NUMTYPE{
         NUMTYPE score=0;
         const std::string& dstr0 = m0.m_pos.get_str() + ":" + get_dir_str(m0.m_dir);
         const std::string& dstr1 = m1.m_pos.get_str() + ":" + get_dir_str(m1.m_dir);
         if(dstr0 != "-" && dstr1 != "-" && (m0.m_dir != m1.m_dir)) {
-            std::cout << "\n\t: " + dstr0 + " to " + dstr1 << ", score for 90 turn";
+            if(print) std::cout << "\n\t: " + dstr0 + " to " + dstr1 << ", score for 90 turn";
             score+=1000;
         }
         if(m0.m_pos.m_x != m1.m_pos.m_x && m0.m_pos.m_y == m1.m_pos.m_y) {
-            std::cout << "\n\t: " + dstr0 + " to " + dstr1 << ", score for x move";
+            if (print)std::cout << "\n\t: " + dstr0 + " to " + dstr1 << ", score for x move";
             score+=1;
         }
         else if(m0.m_pos.m_y != m1.m_pos.m_y && m0.m_pos.m_x == m1.m_pos.m_x) {
-            std::cout << "\n\t: " + dstr0 + " to " + dstr1 << ", score for Y move";
+            if (print)std::cout << "\n\t: " + dstr0 + " to " + dstr1 << ", score for Y move";
             score+=1;
         }
         return score;
@@ -148,7 +148,7 @@ NUMTYPE calculate_score_of_moves_list(const MVLIST& mvList)
         ++i_iter;
     }
 
-    std::cout << "\nLEN: " << mvList.size() <<" SCORE: " << score1 << "\n";
+    if (print)std::cout << "\nLEN: " << mvList.size() <<" SCORE: " << score1 << "\n";
     return score1;
 }
 
