@@ -82,6 +82,25 @@ std::string get_new_key(NUMTYPE iterIDX)
     return key_str;
 }
 
+
+bool all_end_GDICT(){
+    bool res=true;
+    for(const auto& d : g_DICT){
+        const auto& l_pos = d.second.back().m_pos;
+        const char& l_chr = g_maze[l_pos];
+        res = res && (l_chr=='#' || l_chr=='E');
+        if(!res){
+            res = false;
+            break;
+        }
+    }
+     const auto res_str = (res) ? "1" : "0";
+    std::cout <<"RESULT: " << res_str << "\n";
+    return res;
+}
+
+std::list<NUMTYPE> g_scores;
+
 int main()
 {
     initialize();
@@ -89,189 +108,160 @@ int main()
     //print_maze();
     //return -1;
 
-    std::list<MovType> g_movs_queue;
-    std::vector<NodeType> g_paths;
-
-    auto is_valid_candidate = [](const PosType& cPos, const MVLIST& gMovs, int xMax, int yMax, std::string& err){
-        bool is_valid=true;
-        if(cPos.m_x <0 || cPos.m_x > xMax){
-            is_valid = false;
-            err += " out-of-range x-pos; ";
-        }
-        else if(cPos.m_y <0 || cPos.m_y > yMax){
-            is_valid = false;
-            err += " out-of-range Y-pos; ";
-        }
-        else if(g_maze[cPos] == '#'){
-            is_valid = false;
-            err += " is HASH at (x,y) in maze; ";
-        }
-        else{
-            for(const MovType& mv : gMovs){
-                int px=mv.m_pos.m_x;
-                int py=mv.m_pos.m_y;
-                if(cPos.m_x==px && cPos.m_y==py) {
-                    is_valid=false;
-                    err += "is present already; ";
-                    break;
-                }
-            }
-        }
-        return is_valid;
-    };
-
-    auto get_next_moves = [&](const MovType& currMov, const MVLIST& gVAL, MVLIST& canL, std::string& val_res){
-        
-        const auto& currPos = currMov.m_pos;
-        MVLIST candidates;
-        candidates.push_back(MovType(PosType(currPos.m_x, currPos.m_y-1), DIRTYPE::UP));
-        candidates.push_back(MovType(PosType(currPos.m_x+1, currPos.m_y), DIRTYPE::RT));
-        candidates.push_back(MovType(PosType(currPos.m_x, currPos.m_y+1), DIRTYPE::DN));
-        candidates.push_back(MovType(PosType(currPos.m_x-1, currPos.m_y), DIRTYPE::LT));
-        
-        for(const auto& c : candidates){
-            std::string err_str;
-            if(is_valid_candidate(c.m_pos, gVAL, g_xMax, g_yMax, err_str)){
-                val_res += "\n\t  valid: " + c.get_str();
-                canL.emplace_back(c);
-            }
-            else{
-                val_res += "\n\tINVALID: " + c.get_str() + ": " + err_str;
-            }
-        }
-    };
-
-    // start from the s-pos
     NUMTYPE i_iter=0;
-    g_DICT.insert({get_new_key(i_iter), {MovType(S_pos,DIRTYPE::NL)}});
+    // start from the s-pos: it is direction-move in RT direction
+    g_DICT.insert({"0", {MovType(S_pos,DIRTYPE::RT)}});
 
-    while(!g_DICT.empty())
+    while(!g_DICT.empty() && !all_end_GDICT())
     {
-        //for(MVDICT_ITR& d_iter=g_DICT.begin(); d_iter!=g_DICT.end(); ++d_iter) {
         KEYSLST currentKeysList;
         for(const auto& dict_item : g_DICT){
             currentKeysList.push_back(dict_item.first);
         }
-        //std::cout<<"\n\nKeys found for this iter: "<< currentKeysList.size() << "\n";
 
         for(const KEYTYPE& cur_iter_key : currentKeysList) {
-            // Fetch all the relevant data from current dictionary item
             const KEYTYPE& d_key = cur_iter_key;
             MVLIST& d_val =g_DICT[d_key];
             const MovType& d_bck = d_val.back();
             //----------------------------
-            //std::string str_m = "\nFor current move-value \"" + d_bck.get_str() + "\"\n";
-            std::cout << "\nLooking at 4 possible move-values for \"" + d_bck.get_str() + "\"\n";
-            //----------------------------
-            // obtain next set of moves
+            std::cout << "Looking at 4 possible move-values for \"" + d_bck.get_str() + "\"\n";
             std::list<MovType> nx_moves;
-            bool found_E=false;// flag is SET when "E" is found
-            bool found_Hash=false;// flag is SET when "#" is found
-            bool is_curr_key_marked_for_del=false;
-            KEYSLST clist_keys2del;
+            std::string msg;
             //----------------------------
-            NUMTYPE n_iter=0;
-            std::string validity_res;
-            get_next_moves(d_bck, d_val, nx_moves, validity_res);
-            //str_m += validity_res;
-            //std::cout << validity_res << "\n";
-            //std::cout<<"\tNew valid positions found: "<< nx_moves.size() << "\n";
+            // get_next_moves(d_bck, d_val, nx_moves, msg);
+            const auto& currPos = d_bck.m_pos;
+            MVLIST candidates;
+            candidates.push_back(MovType(PosType(currPos.m_x, currPos.m_y-1), DIRTYPE::UP));
+            candidates.push_back(MovType(PosType(currPos.m_x+1, currPos.m_y), DIRTYPE::RT));
+            candidates.push_back(MovType(PosType(currPos.m_x, currPos.m_y+1), DIRTYPE::DN));
+            candidates.push_back(MovType(PosType(currPos.m_x-1, currPos.m_y), DIRTYPE::LT));
+            for(const auto& c : candidates){
+            //---------------
+                bool is_valid_candidate = false;
+                if(c.m_pos.m_x >=0 && c.m_pos.m_x <= g_xMax && c.m_pos.m_y >=0 && c.m_pos.m_y <= g_yMax){
+                    is_valid_candidate = true;
+                    for(const MovType& mv : d_val){
+                        int px=mv.m_pos.m_x;
+                        int py=mv.m_pos.m_y;
+                        if(c.m_pos.m_x==px && c.m_pos.m_y==py) {
+                            is_valid_candidate=false;
+                            break;
+                        }
+                    }
+                }
+                if(is_valid_candidate){
+                    nx_moves.emplace_back(c);
+                }
+                //---------------
+            }
             //----------------------------
+            size_t n_is_added = 0;
+            //bool found_E = false;
+            //bool found_H = false;
             for(const MovType& nx : nx_moves){
+                //----------------------------
+                KEYTYPE current_key=d_key;
+                //----------------------------
                 const char maze_d=g_maze[nx.m_pos];
-                found_E=maze_d=='E';
-                found_Hash=maze_d=='#';
-                if(found_Hash) std::cout << "\t:  has hit symbol \"#\"" << "\n";
-                auto current_key=d_key;
                 //----------------------------
-                // str_m += "\t : added \"" + nx.get_str() + "\" to KEY:" + current_key + "\n";
+                const bool found_E=maze_d=='E';
+                const bool found_H=maze_d=='#';
                 //----------------------------
-                if(0==n_iter){
-                    d_val.emplace_back(nx); // is equivalent to doing g_DICT[current_key].emplace_back(nx)
-                    //str_m += "\t : added \"" + nx.get_str() + "\" to cur-KEY:" + current_key + "\n";
-                    std::cout << "\t: added \"" + nx.get_str() + "\" to cur-KEY:" + current_key + "\n";
-                    if(found_E || found_Hash){
-                        is_curr_key_marked_for_del=true;
+                if(found_E)    std::cout << "\t:  has found symbol \""<<maze_d<<"\" for KEY:" << current_key << "\n";
+                if(found_H) std::cout << "\t:  has hit symbol \"#\"" << "\n";
+                //----------------------------
+                if(0==n_is_added){
+                    if(found_H){
+                        // do nothing
+                    }else{
+                        std::cout << "\t: added \"" + nx.get_str() + "\" to cur-KEY:" + current_key + "\n";
+                        d_val.emplace_back(nx);
+                        ++n_is_added;
                     }
                 }
                 else{
-                    i_iter += 1;
-                    const auto newKey = get_new_key(i_iter);
-                    current_key = newKey;
-                    std::list<MovType> c_movlist;
-                    //std::cout << "\t:  copying values from current list to generate new entry to dict...\n";
-                    // copy the existing iteration key values
-                    for(const auto& v : d_val){
-                        c_movlist.emplace_back(v);
-                    }
-                    // add the new valid position
-                    c_movlist.emplace_back(nx);
-                    //str_m += "\t : added \"" + nx.get_str() + "\" to new-KEY:" + current_key + "\n";
-                    std::cout << "\t: added \"" + nx.get_str() + "\" to new-KEY:" + current_key + "\n";
-                    // insert the new moves list mapped against the new KEY
-                    g_DICT.insert({newKey, c_movlist});
-                    // if the new value inserted is "E" or "#" mark key for deletion
-                    if(found_E || found_Hash){
-                        clist_keys2del.push_back(newKey);
+                    if(found_H){
+                        // do nothing
+                    }else{
+                        //const auto newKey = get_new_key(i_iter);
+                        const std::string newKey = std::to_string(++i_iter);
+                        current_key = newKey;
+                        // ------------------------------------------
+                        std::list<MovType> c_movlist;
+                        // ------------------------------------------
+                        //std::copy(d_val.begin(), d_val.end(), std::back_inserter(c_movlist)); // copy existing
+                        for(const auto& mv : d_val){
+                            std::cout << "\t: copied \"" + mv.get_str() + "\" from KEY:" << d_key <<" to new-KEY:" + newKey + "\n";
+                            c_movlist.push_back(mv);
+                        }
+                        const auto& last_item = d_val.back();
+                        if(false == (d_bck == last_item)){
+                            c_movlist.pop_back(); // last element was added for another list when n_is_added==0
+                        }
+                        // ------------------------------------------
+                        c_movlist.emplace_back(nx); // add new
+                        std::cout << "\t: added \"" + nx.get_str() + "\" to new-KEY:" + newKey + "\n";
+                        g_DICT.insert({newKey, c_movlist});
+                        // ------------------------------------------
+                        ++n_is_added;
                     }
                 }
-                ++n_iter;
                 //----------------------------
-                if(found_E){
-                    // if "E" is found then create a copy of the list
-                    // that is mapped to the current key from the iteration
-                    MVLIST newMvLst;
+                if(found_E){// if "E" is found 
                     const MVLIST& cMvLst = g_DICT[current_key];
-                    //std::cout << "\t:  cp/mv-ing values KEY:" + current_key + " as it found \"E\"...\n";
-                    for(const auto& mv : cMvLst){
-                        newMvLst.push_back(mv);
+                    MVLIST e_List;; MovType o_mv; int i=0;
+                    std::cout << "\nPOST_FOUND E FOR KEY:"<<current_key<<"\n";
+                    for(const auto& c_mv : cMvLst){
+                        std::cout << "\n\tAdding " << c_mv.get_str() << " after " << o_mv.get_str();
+                        if(i != 0 && o_mv.m_pos.m_x != c_mv.m_pos.m_x && o_mv.m_pos.m_y != c_mv.m_pos.m_y){
+                            std::cout << "\n: BAD BAD!!!\n\n";
+                            return -1;
+                            //continue;
+                        }
+                        else{
+                            e_List.push_back(c_mv);
+                        }
+                        o_mv = c_mv;
+                        ++i;
                     }
-                    // push that list to the global list of move to reach  "E"
-                    g_lstmoves_toE.emplace_back(newMvLst);
-                    std::cout << "\t: " << g_lstmoves_toE.size() << " E ending list with " << newMvLst.size() << " elements added. ...\n"; 
+                    g_lstmoves_toE.push_back(e_List);
+                    //const NUMTYPE moves_score = calculate_score_of_moves_list(cMvLst);
+                    //std::cout << "\n Score of key: " << current_key << " is " << moves_score <<"\n";
+                    //g_scores.push_back(moves_score);
+                    g_keys_to_del.push_back(d_key);
                 }
             }
             //std::cout << str_m;
             //----------------------------
             std::string str_k;
             //----------------------------
-            if(nx_moves.empty() || is_curr_key_marked_for_del){
+            if(n_is_added == 0 || nx_moves.empty()){
                 // if no moves are found for the current position
-                // OR if the current position is marked for deletion
-                // then add it to the keys to be deleted
-                // NOTE: current key can be marked for deletion at it
-                // might have been moved to the global-list of moves
-                // to reach "E"
                 //std::cout << "\t:  added the top-cur KEY:" + d_key + " for deletion ...\n";
-                clist_keys2del.push_back(d_key);
+                g_keys_to_del.push_back(d_key);
             }
-            //----------------------------
-            for(const auto& dK : clist_keys2del){
-                // copy key strings inside the local list to the global
-                // list of keys-marked-for-deletion so that these keys
-                // can be used for overwriting related mempry mapped in
-                // the g_DICT object in the upcoming iterations
-                //std::cout << "\t:  marking KEY: " << dK << " for deletion ...\n";
-                // str_k += " " + dK + ",";
-                g_keys_to_del.emplace_back(dK);
-            }
-            clist_keys2del.clear();
-            //if(!str_k.empty())
-            //{
-            //    str_k = "\tKeys to be deleted: " + str_k + "\n";
-            //    std::cout << str_k;
-            //    str_k = "";
-            //}
         }
+
         for(const KEYTYPE& dK : g_keys_to_del){
-            std::cout << "\t:  deleting KEY: " << dK << " ...\n";
-            g_DICT.erase(dK);
+            std::cout << "\t:  deleting KEY: " << dK << " ...\n"; g_DICT.erase(dK);
+            //std::cout << "\t:  clearing KEY: " << dK << " ...\n"; g_DICT[dK].clear();
         }
         g_keys_to_del.clear();
-        //if(i_iter>125) return -1;
+
     }
 
-    std::cout << "\n\nMIN SCORE: " << get_min_score(g_lstmoves_toE) << "\n";
+    for(const auto& cs_list: g_lstmoves_toE){
+        const NUMTYPE moves_score = calculate_score_of_moves_list(cs_list);
+        std::cout << "\n LEN: " << cs_list.size() << " Score:" << moves_score <<"\n";
+        g_scores.push_back(moves_score);
+    }
+
+    g_scores.sort();
+    int idx=0;
+    for(const auto s : g_scores){
+        std::cout << "\nScore-" << idx++ << ": " << s ;
+    }
+    std::cout << "\n\nMIN SCORE: " << g_scores.front() << "\n";
 
     return 0;
 }
