@@ -2,7 +2,7 @@
 #include <fstream>
 #include "cp1.h"
 
-std::string g_iFileName="sample1.txt";
+std::string g_iFileName="puzzle.txt";
 
 //auto pos_cmp =[](const PostType& p1, const PostType& p2) -> bool{
 
@@ -16,8 +16,9 @@ int g_yMax=-1;
 
 MVDICT g_DICT;
 std::list<MVLIST> g_lstmoves_toE;
-
 std::list<std::string> g_keys_to_del;
+std::list<NUMTYPE> g_scores;
+std::map<KEYTYPE,NUMTYPE> g_key_vs_score;
 
 void initialize()
 {
@@ -95,11 +96,31 @@ bool all_end_GDICT(){
         }
     }
      const auto res_str = (res) ? "1" : "0";
-    std::cout <<"RESULT: " << res_str << "\n";
+    //std::cout <<"RESULT: " << res_str << "\n";
     return res;
 }
 
-std::list<NUMTYPE> g_scores;
+
+void chop_off_more_than_100_and_store_score(const KEYTYPE& key){
+    std::string print_str ="\n\n CHOPPING OFF 100 elements from KEY:" + key;
+    int idx=0;
+    int ndx=100;
+    std::list<MovType>& gLIST = g_DICT[key];
+    std::list<MovType> c_lst;
+    for(;idx < ndx; ++idx){
+        c_lst.push_back(gLIST.front());
+        gLIST.pop_front();
+    }
+    NUMTYPE n_score=calculate_score_of_moves_list(c_lst);
+    auto i_key = g_key_vs_score.find(key);
+    if(i_key != g_key_vs_score.end()){
+        g_key_vs_score[key] += n_score;
+    } else{
+        g_key_vs_score.insert({key, n_score});
+    }
+    print_str += " SCORE: " + std::to_string(n_score)  + "\n";
+    std::cout << print_str;
+}
 
 int main()
 {
@@ -120,11 +141,18 @@ int main()
         }
 
         for(const KEYTYPE& cur_iter_key : currentKeysList) {
+            //----------------------------
             const KEYTYPE& d_key = cur_iter_key;
-            MVLIST& d_val =g_DICT[d_key];
+            //----------------------------
+            // chop off list till 5 if n_elements > 105
+            if(105<g_DICT[d_key].size()){
+                chop_off_more_than_100_and_store_score(d_key);
+            }
+            //----------------------------
+            MVLIST& d_val = g_DICT[d_key];
             const MovType& d_bck = d_val.back();
             //----------------------------
-            std::cout << "Looking at 4 possible move-values for \"" + d_bck.get_str() + "\"\n";
+            //std::cout << "Looking at 4 possible move-values for \"" + d_bck.get_str() + "\" for KEY:" << cur_iter_key << "\n";
             std::list<MovType> nx_moves;
             std::string msg;
             //----------------------------
@@ -168,13 +196,13 @@ int main()
                 const bool found_H=maze_d=='#';
                 //----------------------------
                 if(found_E)    std::cout << "\t:  has found symbol \""<<maze_d<<"\" for KEY:" << current_key << "\n";
-                if(found_H) std::cout << "\t:  has hit symbol \"#\"" << "\n";
+                //if(found_H) std::cout << "\t:  has hit symbol \"#\"" << "\n";
                 //----------------------------
                 if(0==n_is_added){
                     if(found_H){
                         // do nothing
                     }else{
-                        std::cout << "\t: added \"" + nx.get_str() + "\" to cur-KEY:" + current_key + "\n";
+                        //std::cout << "\t: added \"" + nx.get_str() + "\" to cur-KEY:" + current_key + "\n";
                         d_val.emplace_back(nx);
                         ++n_is_added;
                     }
@@ -189,18 +217,23 @@ int main()
                         // ------------------------------------------
                         std::list<MovType> c_movlist;
                         // ------------------------------------------
-                        //std::copy(d_val.begin(), d_val.end(), std::back_inserter(c_movlist)); // copy existing
-                        for(const auto& mv : d_val){
+                        //std::cout << "\t: copied KEY:" << d_key <<" data to new-KEY:" + newKey + "\n";
+                        std::copy(d_val.begin(), d_val.end(), std::back_inserter(c_movlist)); // copy existing
+                        auto i_key = g_key_vs_score.find(current_key); // also copy chopped off score
+                        if(i_key != g_key_vs_score.end()){
+                            g_key_vs_score.insert({newKey, g_key_vs_score[current_key]});
+                        }
+                        /*for(const auto& mv : d_val){
                             std::cout << "\t: copied \"" + mv.get_str() + "\" from KEY:" << d_key <<" to new-KEY:" + newKey + "\n";
                             c_movlist.push_back(mv);
-                        }
+                        }*/
                         const auto& last_item = d_val.back();
                         if(false == (d_bck == last_item)){
                             c_movlist.pop_back(); // last element was added for another list when n_is_added==0
                         }
                         // ------------------------------------------
                         c_movlist.emplace_back(nx); // add new
-                        std::cout << "\t: added \"" + nx.get_str() + "\" to new-KEY:" + newKey + "\n";
+                        //std::cout << "\t: added \"" + nx.get_str() + "\" to new-KEY:" + newKey + "\n";
                         g_DICT.insert({newKey, c_movlist});
                         // ------------------------------------------
                         ++n_is_added;
@@ -209,12 +242,14 @@ int main()
                 //----------------------------
                 if(found_E){// if "E" is found 
                     const MVLIST& cMvLst = g_DICT[current_key];
-                    MVLIST e_List;; MovType o_mv; int i=0;
-                    std::cout << "\nPOST_FOUND E FOR KEY:"<<current_key<<"\n";
+                    MVLIST e_List; MovType o_mv; int i=0;
+                    std::string str_err="";
+                    str_err="\nPOST_FOUND E FOR KEY:"+current_key+"\n";
                     for(const auto& c_mv : cMvLst){
-                        std::cout << "\n\tAdding " << c_mv.get_str() << " after " << o_mv.get_str();
+                        //std::cout << "\n\tAdding " << c_mv.get_str() << " after " << o_mv.get_str();
                         if(i != 0 && o_mv.m_pos.m_x != c_mv.m_pos.m_x && o_mv.m_pos.m_y != c_mv.m_pos.m_y){
-                            std::cout << "\n: BAD BAD!!!\n\n";
+                            str_err += "\n: BAD BAD!!!\n\n";
+                            std::cout << str_err;
                             return -1;
                             //continue;
                         }
@@ -224,11 +259,18 @@ int main()
                         o_mv = c_mv;
                         ++i;
                     }
-                    g_lstmoves_toE.push_back(e_List);
-                    //const NUMTYPE moves_score = calculate_score_of_moves_list(cMvLst);
-                    //std::cout << "\n Score of key: " << current_key << " is " << moves_score <<"\n";
-                    //g_scores.push_back(moves_score);
+                    //-------------------------------------------
+                    //g_lstmoves_toE.push_back(e_List);
+                    NUMTYPE moves_score = calculate_score_of_moves_list(cMvLst, true);
+                    // add score from the chopped off map if anything mapped to key there
+                    auto i_key = g_key_vs_score.find(current_key);
+                    if(i_key != g_key_vs_score.end()){
+                        moves_score += g_key_vs_score[current_key];
+                    }
+                    std::cout << "\n Score of key: " << current_key << " is " << moves_score <<"\n";
+                    g_scores.push_back(moves_score);
                     g_keys_to_del.push_back(d_key);
+                    //-------------------------------------------
                 }
             }
             //std::cout << str_m;
@@ -243,18 +285,18 @@ int main()
         }
 
         for(const KEYTYPE& dK : g_keys_to_del){
-            std::cout << "\t:  deleting KEY: " << dK << " ...\n"; g_DICT.erase(dK);
-            //std::cout << "\t:  clearing KEY: " << dK << " ...\n"; g_DICT[dK].clear();
+            //std::cout << "\t:  deleting KEY: " << dK << " ...\n";
+            g_DICT.erase(dK);
         }
         g_keys_to_del.clear();
 
     }
 
-    for(const auto& cs_list: g_lstmoves_toE){
+    /*for(const auto& cs_list: g_lstmoves_toE){
         const NUMTYPE moves_score = calculate_score_of_moves_list(cs_list);
         std::cout << "\n LEN: " << cs_list.size() << " Score:" << moves_score <<"\n";
         g_scores.push_back(moves_score);
-    }
+    }*/
 
     g_scores.sort();
     int idx=0;
