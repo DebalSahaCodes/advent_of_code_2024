@@ -43,7 +43,7 @@ struct PosType{
         return *this;
     }
     bool operator <(const PosType&) const;
-    bool operator==(const PosType& p1){return m_x==p1.m_x && m_y==p1.m_y;}
+    bool operator==(const PosType& p1)const {return m_x==p1.m_x && m_y==p1.m_y;}
     const std::string get_str() const;
 };
 bool PosType::operator <(const PosType& p) const {
@@ -56,7 +56,7 @@ bool PosType::operator <(const PosType& p) const {
     }
 }
 const std::string PosType::get_str() const{
-    return std::to_string(m_x) + "," + std::to_string(m_y);
+    return std::to_string(m_x) + ":" + std::to_string(m_y);
 }
 
 
@@ -75,8 +75,9 @@ struct MovType{
         this->m_dir=m.m_dir;
         return *this;
     }
+    bool operator==(const MovType& mv) const {return m_pos==mv.m_pos && m_dir==mv.m_dir;}
     const std::string get_str() const{
-        return m_pos.get_str() + "," + get_dir_str(m_dir);
+        return m_pos.get_str() + ":" + get_dir_str(m_dir);
     }
 };
 
@@ -112,36 +113,42 @@ NUMTYPE calculate_score_of_moves_list(const MVLIST& mvList)
 {
     auto score_from_moves = [](const MovType& m0, const MovType& m1)->NUMTYPE{
         NUMTYPE score=0;
-        if(m1.m_pos.m_x != m1.m_pos.m_x) {
-            std::cout << "\n\t: score for x move";
-            score+=1;
-        }
-        else if(m1.m_pos.m_y != m1.m_pos.m_y) {
-            std::cout << "\n\t: score for Y move";
-            score+=1;
-        }
-        if(m1.m_dir != m1.m_dir) {
-            std::cout << "\n\t: score for 90 turn";
+        const std::string& dstr0 = m0.m_pos.get_str() + ":" + get_dir_str(m0.m_dir);
+        const std::string& dstr1 = m1.m_pos.get_str() + ":" + get_dir_str(m1.m_dir);
+        if(dstr0 != "-" && dstr1 != "-" && (m0.m_dir != m1.m_dir)) {
+            std::cout << "\n\t: " + dstr0 + " to " + dstr1 << ", score for 90 turn";
             score+=1000;
+        }
+        if(m0.m_pos.m_x != m1.m_pos.m_x && m0.m_pos.m_y == m1.m_pos.m_y) {
+            std::cout << "\n\t: " + dstr0 + " to " + dstr1 << ", score for x move";
+            score+=1;
+        }
+        else if(m0.m_pos.m_y != m1.m_pos.m_y && m0.m_pos.m_x == m1.m_pos.m_x) {
+            std::cout << "\n\t: " + dstr0 + " to " + dstr1 << ", score for Y move";
+            score+=1;
         }
         return score;
     };
 
     NUMTYPE i_iter = 0;
     MovType o_mov;
-    NUMTYPE score1;
+    NUMTYPE score1 = 0;
     for(const MovType& d_mov : mvList){
         if(i_iter == 0){
             o_mov=d_mov;
         }
         else{
-            score1 += score_from_moves(o_mov, d_mov);
+            const auto score_c = score_from_moves(o_mov, d_mov);
+            if(score_c == -1){
+                return -1;
+            }
+            score1 += score_c;
             o_mov=d_mov;
         }
         ++i_iter;
     }
 
-    std::cout << "CURR SCORE: " << score1 << "\n";
+    std::cout << "\nLEN: " << mvList.size() <<" SCORE: " << score1 << "\n";
     return score1;
 }
 
