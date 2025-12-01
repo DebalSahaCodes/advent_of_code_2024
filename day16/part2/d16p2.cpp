@@ -5,8 +5,9 @@
 #include <list>
 #include <map>
 #include <algorithm>
+#include <set>
 
-std::string g_iFileName="sample1old.txt";
+std::string g_iFileName="sample2.txt";
 
 std::map<std::pair<int,int>,std::pair<char,int>> g_maze;
 
@@ -101,17 +102,16 @@ LTYPE get_next(const RTYPE& given_v)
     const char& c_p1 = maze_obj.first;
     const bool found_E = c_p1=='E';
     const bool found_H = c_p1=='#';
-    bool found_MIN = !g_scores.empty() && score >= g_scores.front();
-    // do another current min. score for the position in MAZE based check
-    // if for the given position in maze there exists a smaller score that means
-    // the current path is not worth traversing
-    int& score_p1 = maze_obj.second;
-    if(score_p1 ==0 || score < score_p1){
-        // this branch updates the MAZE position score with the current min. score
-        score_p1=score;
-    } else if(score_p1 !=0 && score > score_p1){
-        // this branch sets FLAG when current min. is smaller than the this iteration score
-        found_MIN=true;
+    bool found_MIN = !g_scores.empty() && score > g_scores.front();
+    if(found_MIN==false) // also check if the maze_pos has a better score
+    {
+        auto& mz_score = maze_obj.second;
+        found_MIN = mz_score!=0 && mz_score < score;
+        if(found_MIN){
+            std::cout << "\n curr-score " << score << " EXCEEDS maze_pos-score " << mz_score;
+        }else if(mz_score > score){
+            mz_score = score;
+        }
     }
 
     const bool is_end_condition = found_E || found_H || found_MIN;
@@ -190,8 +190,9 @@ LTYPE get_next(const RTYPE& given_v)
 }
 
 
-std::string get_new_map_key(const std::string& curr_key, const int idx){
-    return std::to_string(std::stoi(curr_key)+idx);
+std::string get_new_map_key(const std::string& curr_key){
+    static int idx=0;
+    return std::to_string(std::stoi(curr_key) + idx++);
 }
 
 using VALUNIT_T=std::tuple<MTYPE, int>;
@@ -246,7 +247,7 @@ void extract_g_paths_from_return(LTYPE& xLIST, int& idxITER)
             orig_key = map_key;
         }else{
             std::cout << "\n\t: added new key : " << map_key;
-            map_key = get_new_map_key(map_key, ++idxITER);
+            map_key = get_new_map_key(map_key);
         }
         //------ Update the KEY for the pos1 to be sent for G_PATHS processing ---
         std::get<3>(posn1) = map_key;
@@ -259,6 +260,209 @@ void extract_g_paths_from_return(LTYPE& xLIST, int& idxITER)
     insert_into_GPATHS(m_DATA, orig_key);
     //------------------------------------------------------
 }
+
+
+
+void do_union_method1(){
+    int minSCORE =  g_scores.front();
+    // -----------------------------
+    //   DO INTERSECTIOM 
+    // -----------------------------
+    using MAZEPOS=std::pair<int,int>;
+    using LstMAZEPOS=std::list<MAZEPOS>;
+
+    std::list<LstMAZEPOS> m_selected;
+
+    int vpIDX=0;
+    for(auto& [kp, vp] : g_paths)
+    {
+        LstMAZEPOS s_selected;
+        std::map<std::pair<int,int>,int> u_selected; // unique keys
+
+        std::list<MTYPE>& mp = std::get<0>(vp);
+        const auto& currSCORE = std::get<1>(vp);
+        std::cout << "\n\t: score for path-" << vpIDX++ << " :" << currSCORE;
+        if(minSCORE < currSCORE){
+            std::cout << " .. skipping";
+            continue;
+        }
+        std::cout << " .. adding " << mp.size() << " positions";
+
+        auto found_key = [&u_selected](const std::pair<int,int>& pkey) -> bool {
+            bool found = false;
+            for(const auto& [k,v] : u_selected){
+                if(k.first == pkey.first && k.second == pkey.second){
+                    found = true;
+                    break;
+                }
+            }
+            return found;
+        };
+
+        for(MTYPE& p : mp){
+            MAZEPOS p1;
+            p1.first  = std::get<0>(p);
+            p1.second = std::get<1>(p);
+            if(false == found_key(p1)){
+                u_selected.insert({p1,0});
+            }else{
+                u_selected[p1] += 1;
+            }
+        }
+        for(const auto& [kPos, v_notused] : u_selected){
+            s_selected.push_back(kPos);
+        }
+        if(s_selected.empty() == false){
+            m_selected.push_back(s_selected);
+        }
+    }
+
+    //m_selected.sort();
+    LstMAZEPOS m_posvalues;
+
+    if(m_selected.size()>1){
+
+        std::list<LstMAZEPOS>::iterator iter = m_selected.begin();
+
+        // copy the smallest list (sorted so assuming smallest at front)
+        std::copy(iter->begin(), iter->end(), std::back_inserter(m_posvalues));
+
+        ++iter; // now filter common positions iterating from SECOND in the list
+
+        for(;iter != m_selected.end(); ++iter){
+            LstMAZEPOS c_posLST;
+            for(const auto& mp : m_posvalues){
+                for(const auto& ip : *iter){
+                    if(mp.first==ip.first && mp.second==ip.second) {
+                        std::cout << "\n\t\t: common maze tile = (" << mp.first << "," << mp.second << ")";
+                        c_posLST.push_back(mp); // found common so add
+                    }
+                }
+            }
+
+            m_posvalues.clear();
+            std::copy(c_posLST.begin(), c_posLST.end(), std::back_inserter(m_posvalues));
+        }
+    } else{
+        std::copy(m_selected.front().begin(), m_selected.front().end(), std::back_inserter(m_posvalues));
+    }
+
+    std::cout << "\nGood common Tiles in MAZE: " << m_posvalues.size();
+}
+
+
+
+
+
+void do_union_method2(){
+    int minSCORE =  g_scores.front();
+    // -----------------------------
+    //   DO INTERSECTIOM 
+    // -----------------------------
+    using MAZEPOS=std::pair<int,int>;
+    using LstMAZEPOS=std::list<MAZEPOS>;
+
+    std::list<std::list<MTYPE>> m_selected;
+
+    int vpIDX=0;
+    for(auto& [kp, vp] : g_paths)
+    {
+        std::list<MTYPE> s_selected;
+        std::map<MTYPE,int> u_selected; // unique keys
+
+        std::list<MTYPE>& mp = std::get<0>(vp);
+        const auto& currSCORE = std::get<1>(vp);
+        std::cout << "\n\t: score for path-" << vpIDX++ << " :" << currSCORE;
+        if(minSCORE < currSCORE){
+            std::cout << " .. skipping";
+            continue;
+        }
+        std::cout << " .. adding " << mp.size() << " positions";
+
+        auto found_key = [&u_selected](const MTYPE& pkey) -> bool {
+            bool found = false;
+            for(const auto& [k,v] : u_selected){
+                bool is_same = true;
+                is_same = is_same && std::get<0>(pkey) == std::get<0>(k);
+                is_same = is_same && std::get<1>(pkey) == std::get<1>(k);
+                is_same = is_same && std::get<2>(pkey) == std::get<2>(k);
+                if(is_same){
+                    found = true;
+                    break;
+                }
+            }
+            return found;
+        };
+
+        for(MTYPE& p : mp){
+            if(false == found_key(p)){
+                u_selected.insert({p,0});
+            }else{
+                u_selected[p] += 1;
+            }
+        }
+        for(const auto& [kPos, v__] : u_selected){
+            s_selected.push_back(kPos);
+        }
+        if(s_selected.empty() == false){
+            m_selected.push_back(s_selected);
+        }
+    }
+
+    std::list<MTYPE> m_posvalues;
+    bool has_SPOS=false;
+    bool has_EPOS=false;
+
+    if(m_selected.size()>1){
+
+        std::list<std::list<MTYPE>>::iterator iter = m_selected.begin();
+
+        // copy the smallest list (sorted so assuming smallest at front)
+        std::copy(iter->begin(), iter->end(), std::back_inserter(m_posvalues));
+
+        ++iter; // now filter common positions iterating from SECOND in the list
+
+        for(;iter != m_selected.end(); ++iter){
+            std::list<MTYPE> c_posLST;
+            std::cout << "\n\t: this iteration ....";
+            for(const auto& mp : m_posvalues){
+                for(const auto& ip : *iter){
+                    bool is_same = true;
+                    is_same = is_same && std::get<0>(mp)==std::get<0>(ip);
+                    is_same = is_same && std::get<1>(mp)==std::get<1>(ip);
+                    is_same = is_same && std::get<2>(mp)==std::get<2>(ip);
+                    if(is_same) {
+                        std::cout << "\n\t: common maze tile = " << get_str(mp);
+                        if(!has_SPOS){
+                            has_SPOS = std::get<0>(mp) == std::get<0>(S_pos);
+                            has_SPOS = has_SPOS && std::get<1>(mp) == std::get<1>(S_pos);
+                            has_SPOS = has_SPOS && std::get<2>(mp) == std::get<2>(S_pos);
+                        }
+                        if(!has_EPOS){
+                            has_EPOS = std::get<0>(mp) == std::get<0>(E_pos);
+                            has_EPOS = has_EPOS && std::get<1>(mp) == std::get<1>(E_pos);
+                            //has_EPOS = has_EPOS && std::get<2>(mp) == std::get<2>(S_pos);
+                        }
+                        c_posLST.push_back(mp); // found common so add
+                    }
+                }
+            }
+
+            m_posvalues.clear();
+            std::copy(c_posLST.begin(), c_posLST.end(), std::back_inserter(m_posvalues));
+        }
+    } else{
+        std::copy(m_selected.front().begin(), m_selected.front().end(), std::back_inserter(m_posvalues));
+    }
+
+    auto total = m_posvalues.size();
+    if(!has_SPOS){ total += 1;}
+    if(!has_EPOS){ total += 1;}
+    std::cout << "\nGood common Tiles in MAZE: " << total;
+}
+
+
+
 
 int main(){
     initialize();
@@ -291,30 +495,84 @@ int main(){
         std::copy(c_List.begin(), c_List.end(), std::back_inserter(u_List));
     }
 
-    std::cout << "\n\n\n MIN SCORE: " << (g_scores.empty() ? -9999 : g_scores.front()) ;
+    if(g_scores.empty()){
+        std::cout << "\n\nFAILED TO OBTAIN MIN. SCORE!!!\n\n";
+        return -1;
+    }
+
+    int minSCORE =  g_scores.front();
+    std::cout << "\n\n\n MIN SCORE: " << minSCORE;
     std::cout << "\nTOTAL G_PATH size: " << g_paths.size();
 
+    //auto print_moves = [](const VALTYPE=std::tuple<std::list<MTYPE>, int>;
+    auto print_moves = [](const VALTYPE& pathV){
+        const std::list<MTYPE>& values = std::get<0>(pathV);
+        for(const auto& v : values){
+            std::cout << "\n\t: " << get_str(v);  //(" << val.first << "," << val.second << ")";
+        }
+    };
+
+/*
+    // -----------------------------
+    //   DO UNION 
+    // -----------------------------
     using MazePosType=std::pair<int,int>;
-    std::map<MazePosType, int> m_selected;
+    std::list<MazePosType> m_posvalues;
+    int vpIDX=0;
     for(auto& [kp, vp] : g_paths){
         std::list<MTYPE>& mp = std::get<0>(vp);
+        const auto& currSCORE = std::get<1>(vp);
+        std::cout << "\n\t: score for path-" << vpIDX++ << " :" << currSCORE;
+        if(minSCORE < currSCORE){
+            std::cout << " .. skipping";
+            continue;
+        }
+        std::cout << " .. adding " << mp.size() << " positions";
         for(MTYPE& p : mp){
             MazePosType p1;
             p1.first  = std::get<0>(p);
             p1.second = std::get<1>(p);
-            if(m_selected.find(p1) == m_selected.end()){
-                m_selected.insert({p1,0});
-            } else {
-                m_selected[p1]+=1;
+            bool is_present = false;
+            for(const MazePosType& po : m_posvalues){
+                if(po.first == p1.first && po.second == p1.second){
+                    is_present = true;
+                    break;
+                }
+            }
+            if(!is_present){
+                m_posvalues.push_back(p1);
             }
         }
     }
 
-    int idxN=0;
-    for(const auto& [key, val] : m_selected){
-        std::cout << "\n" << idxN << ": (" << key.first << "," << key.second << ")";
-        ++idxN;
+    m_posvalues.sort();
+    //int idxN=0;
+    //for(const auto& val : m_posvalues){
+    //    std::cout << "\n" << idxN++ << ": (" << val.first << "," << val.second << ")";
+    //}
+
+    std::string new_MAZE,str1;
+    std::ifstream iHdl(g_iFileName);
+    while(iHdl >> str1){
+        new_MAZE = str1;
     }
-    std::cout << "\nTOTAL Tiles in MAZE: " << m_selected.size();
+    iHdl.close();
+    //std::ofstream iHdl = open("sol_" + g_iFileName, std::);
+*/
+
+
+    do_union_method2();
+
+    //int sidx=0;
+    //for(const auto& msel = m_selected.begin(); msel != m_selected.end(); ++msel, ++sidx){
+    //    if(sidx > 0){
+    //        LstMAZEPOS c_temp;
+    //        for(const auto& s : *msel){
+    //            for(const auto& p : m_posvalues){
+    //                if(s.first==p.first && 
+    //        }
+    //    }
+    //}
+
     return 0;
 }
